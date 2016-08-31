@@ -150,26 +150,23 @@ function testDELETE() {
       testGETnullBody,
       testPOST,
       testPOSTSerializedPayload,
-      testDELETE,
-      testPUT
+      testPUT,
+      testDELETE
    ]
 
    let testCount = tests.length
    let passed = 0
-   let promise = Promise.resolve()
-
-   tests.forEach((test) => {
+   let promise = tests.reduce((p, test) => {
       let t = test()
-      let title = t.title
-      let expectedResponse = t.expectedResponse
-      promise = promise.then(() => {
+      return p.then(() => {
          return t.promise
       }).then((actualResponse) => {
-         if (testJSON(expectedResponse, JSON.parse(actualResponse), false, title)) {
+         if (testJSON(t.expectedResponse, JSON.parse(actualResponse), false, t.title)) {
             passed++
          }
       })
-   })
+   }, Promise.resolve())
+
    promise.then(() => {
       console.log(`${passed} OUT OF ${testCount} TEST CASES PASSED`)
    })
