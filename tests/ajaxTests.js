@@ -1,6 +1,6 @@
 ajax = require('../ajax.js')
 
-function testJSON(expected, actual, log) {
+function testJSON(expected, actual, log, title) {
    if (log) {
       console.log('TEST START\n\n')
       console.log('EXPECTED RESPONSE:\n\n')
@@ -16,16 +16,17 @@ function testJSON(expected, actual, log) {
       result = result && (expected[i] === actual[i])
    }
    if (result) {
-      console.log('TEST RESULT: PASS\n\n')
+      console.log(`RESULT of ${title}: PASS\n\n`)
    } else {
-      console.log('TEST RESULT: FAIL\n\n')
+      console.log(`RESULT of ${title}: FAIL\n\n`)
    }
    return result
 }
 
-function test(expectedResponse, promise) {
+function test(expectedResponse, promise, title) {
    this.expectedResponse = expectedResponse
    this.promise = promise
+   this.title = title
 }
 
 // Test GET
@@ -44,7 +45,7 @@ function testGET() {
 
    let promise = ajax('http://jsonplaceholder.typicode.com/posts/1', { method: 'GET' })
 
-   return new test(expectedResponse, promise)
+   return new test(expectedResponse, promise, 'Test GET')
 }
 
 function testGETnullBody() {
@@ -61,7 +62,7 @@ function testGETnullBody() {
 
    let promise = ajax('http://jsonplaceholder.typicode.com/posts/1', { method: 'GET', body: null })
 
-   return new test(expectedResponse, promise)
+   return new test(expectedResponse, promise, 'Test GET with null body')
 }
 
 // Test PUT
@@ -83,7 +84,7 @@ function testPUT() {
       body: expectedResponse
    })
 
-   return new test(expectedResponse, promise)
+   return new test(expectedResponse, promise, 'Test PUT')
 }
 
 // Test POST
@@ -105,7 +106,7 @@ function testPOST() {
       body: expectedResponse
    })
 
-   return new test(expectedResponse, promise)
+   return new test(expectedResponse, promise, 'Test POST')
 }
 
 function testPOSTSerializedPayload() {
@@ -125,7 +126,7 @@ function testPOSTSerializedPayload() {
       body: JSON.stringify(expectedResponse)
    })
 
-   return new test(expectedResponse, promise)
+   return new test(expectedResponse, promise, 'Test POST with Serialized Payload')
 }
 
 // Test DELETE
@@ -138,31 +139,38 @@ function testDELETE() {
       method: 'DELETE',
    })
 
-   return new test(expectedResponse, promise)
+   return new test(expectedResponse, promise, 'Test Delete')
 }
 
 // Run Tests
 
 (_ => {
    let tests = [
-      testGET(),
-      testGETnullBody(),
-      testPUT(),
-      testPOST(),
-      testPOSTSerializedPayload(),
-      testDELETE()
+      testGET,
+      testGETnullBody,
+      testPOST,
+      testPOSTSerializedPayload,
+      testDELETE,
+      testPUT
    ]
 
    let testCount = tests.length
    let passed = 0
+   let promise = Promise.resolve()
 
-   Promise.all(tests.map((e) => e.promise)).then((actualResponses) => {
-      let expectedResponses = tests.map((e) => e.expectedResponse)
-      for (let i = 0; i < expectedResponses.length; i++) {
-         if (testJSON(expectedResponses[i], JSON.parse(actualResponses[i]), false)) {
+   tests.forEach((test) => {
+      let t = test()
+      let title = t.title
+      let expectedResponse = t.expectedResponse
+      promise = promise.then(() => {
+         return t.promise
+      }).then((actualResponse) => {
+         if (testJSON(expectedResponse, JSON.parse(actualResponse), false, title)) {
             passed++
          }
-      }
+      })
+   })
+   promise.then(() => {
       console.log(`${passed} OUT OF ${testCount} TEST CASES PASSED`)
    })
 })()
